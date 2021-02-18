@@ -1,21 +1,28 @@
 import os
 from pathlib import Path
-from tkinter import *
+from tkinter import Tk, Button, YES, Label
 import webbrowser
 from tkinter import messagebox
 
 
-def build(res: Path):
+def build(res: Path) -> Tk:
     window = Tk()
     window.title("antaREST")
     window.geometry("200x100")
     window.config(background="#112446")
-    window.iconbitmap(res / "logo.ico")
 
-    link = Button(window, text="Go to server", bg="#e48b08", command=lambda: webbrowser.open("http://localhost"))
+    link = Button(
+        window,
+        text="Go to server",
+        bg="#e48b08",
+        fg="black",
+        command=lambda: webbrowser.open("http://localhost"),
+    )
     link.pack(expand=YES)
 
-    def on_closing():
+    Label(window, text="Server running...", fg="#e48b08", bg="#112446").pack()
+
+    def on_closing() -> None:
         if messagebox.askokcancel("Quit", "If you quit, server stop."):
             window.destroy()
 

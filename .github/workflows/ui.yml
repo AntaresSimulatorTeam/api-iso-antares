@@ -1,0 +1,51 @@
+name: ui
+on:
+  push:
+    branches:
+      - 'ui'
+
+
+jobs:
+  binary:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 3
+      matrix:
+        os: [windows-latest, ubuntu-latest, macOS-latest]
+
+    steps:
+      - name: Checkout github repo (+ download lfs dependencies)
+        uses: actions/checkout@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - name: Install dependencies
+        run: npm install
+        working-directory: webapp
+      - name: Build
+        run: bash ./build-front.sh
+        working-directory: scripts
+      - name: Copy build to app resources
+        run: cp -r webapp/build resources/webapp
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.6
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Generate binary Unix
+        if: matrix.os != 'windows-latest'
+        run: |
+          pyinstaller -F antarest/ui.py -n ui --windowed --icon resources/logo.ico
+      - name: Generate binary Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          pyinstaller -F antarest\ui.py -n ui --windowed --icon resources/logo.ico
+      - name: Archive server binary
+        uses: actions/upload-artifact@v2
+        with:
+          name: ui-${{ matrix.os }}
+          path: dist/ui*
