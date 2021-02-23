@@ -13,6 +13,7 @@ import LoginWrapper from './LoginWrapper';
 import theme, { TOOLBAR_HEIGHT } from './theme';
 import SwaggerDoc from './Pages/SwaggerDoc';
 import JobManagement from './Pages/JobManagement';
+import DownloadManager from '../components/ui/DownloadLink/DownloadManager';
 
 const reduxStore = createStore();
 
@@ -24,6 +25,7 @@ const App: React.FC<{}> = () => (
         <SnackbarProvider maxSnack={5}>
           <div style={{ height: '100vh' }}>
             <LoginWrapper>
+              <DownloadManager />
               <MenuBar />
               <div style={{ position: 'absolute', bottom: 0, width: '100%', overflow: 'hidden', top: TOOLBAR_HEIGHT }}>
                 <Switch>

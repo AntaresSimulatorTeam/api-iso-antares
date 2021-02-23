@@ -7,6 +7,7 @@ import study, { StudyState } from '../ducks/study';
 import auth, { AuthState, logoutAction, persistState as persistAuthState } from '../ducks/auth';
 import { setLogoutInterceptor } from '../services/api/client';
 import upload, { UploadState } from '../ducks/upload';
+import download, { DownloadState } from '../ducks/download';
 import global, { GlobalState } from '../ducks/global';
 
 const reducers = combineReducers({
@@ -14,6 +15,7 @@ const reducers = combineReducers({
   study,
   auth,
   upload,
+  download,
 });
 
 export type AppState = CombinedState<{
@@ -21,6 +23,7 @@ export type AppState = CombinedState<{
   study: StudyState;
   auth: AuthState;
   upload: UploadState;
+  download: DownloadState;
 }>;
 
 export default function createMainStore(): Store<AppState> {

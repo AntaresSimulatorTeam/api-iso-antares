@@ -40,7 +40,7 @@ export interface AddUploadAction extends Action {
 
 export const addUpload = (name: string): ThunkAction<string, AppState, unknown, AnyAction> => (dispatch): string => {
   const uploadId = uuidv4();
-  const listenerId = dispatch(addOnCloseListener(() => 'You must refresh false'));
+  const listenerId = dispatch(addOnCloseListener(() => 'Refreshing wil abort current upload operation'));
   dispatch({
     type: 'UPLOAD/UPDATE_GLOBAL_LISTENER',
     payload: listenerId,
