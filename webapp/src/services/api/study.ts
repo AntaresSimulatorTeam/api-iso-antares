@@ -18,7 +18,7 @@ export const getStudies = async (): Promise<StudyMetadata[]> => {
   });
 };
 
-export const getStudyData = async (sid: string, path = '', depth = -1): Promise<any> => {
+export const getStudyData = async (sid: string, path = '', depth = 1): Promise<any> => {
   const res = await client.get(`/studies/${sid}/${path}?depth=${depth}`);
   return res.data;
 };
@@ -47,6 +47,7 @@ export const importStudy = async (file: File, onProgress?: (progress: number) =>
   const formData = new FormData();
   formData.append('study', file);
   const restconfig = {
+    ...options,
     headers: {
       'content-type': 'multipart/form-data',
       'Access-Control-Allow-Origin': '*',
@@ -54,6 +55,36 @@ export const importStudy = async (file: File, onProgress?: (progress: number) =>
   };
   const res = await client.post('/studies', formData, restconfig);
   return res.data;
+};
+
+export const launchStudy = async (sid: string): Promise<string> => {
+  const res = await client.post(`/launcher/run/${sid}`);
+  return res.data;
+};
+
+export interface LaunchJob {
+  id: string;
+  studyId: string;
+  status: string;
+  creationDate: string;
+  completionDate: string;
+  msg: string;
+  exitCode: number;
+}
+
+export const getStudyJobs = async (sid?: string): Promise<LaunchJob[]> => {
+  const query = sid ? `?study=${sid}` : '';
+  const res = await client.get(`/launcher/jobs${query}`);
+  const data = await res.data;
+  return data.map((j: any) => ({
+    id: j.id,
+    studyId: j.study_id,
+    status: j.status,
+    creationDate: j.creation_date,
+    completionDate: j.completion_date,
+    msg: j.msg,
+    exitCode: j.exit_code,
+  }));
 };
 
 export default {};

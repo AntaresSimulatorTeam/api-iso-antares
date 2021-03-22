@@ -1,9 +1,20 @@
+from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
 
 from antarest.common.config import Config
+from antarest.common.interfaces.eventbus import (
+    IEventBus,
+    Event,
+    EventType,
+    DummyEventBusService,
+)
 from antarest.launcher.factory_launcher import FactoryLauncher
 from antarest.launcher.model import JobResult, JobStatus
 from antarest.launcher.repository import JobResultRepository
+from antarest.common.requests import (
+    RequestParameters,
+)
 from antarest.storage.service import StorageService
 
 
@@ -17,27 +28,46 @@ class LauncherService:
         config: Config,
         storage_service: StorageService,
         repository: JobResultRepository,
+        event_bus: IEventBus,
         factory_launcher: FactoryLauncher = FactoryLauncher(),
     ) -> None:
         self.config = config
         self.storage_service = storage_service
         self.repository = repository
+        self.event_bus = event_bus
         self.launcher = factory_launcher.build_launcher(config)
         self.launcher.add_callback(self.update)
 
     def update(self, job_result: JobResult) -> None:
+        job_result.completion_date = datetime.utcnow()
         self.repository.save(job_result)
+        self.event_bus.push(
+            Event(
+                EventType.STUDY_JOB_COMPLETED,
+                {"jid": str(job_result.id), "sid": job_result.study_id},
+            )
+        )
 
-    def run_study(self, study_uuid: str) -> UUID:
+    def run_study(self, study_uuid: str, params: RequestParameters) -> UUID:
         study_info = self.storage_service.get_study_information(
-            uuid=study_uuid
+            uuid=study_uuid, params=params
         )
         study_version = study_info["antares"]["version"]
-        study_path = self.storage_service.get_study_path(study_uuid)
+        study_path = self.storage_service.get_study_path(study_uuid, params)
         job_uuid: UUID = self.launcher.run_study(study_path, study_version)
 
         self.repository.save(
-            JobResult(id=str(job_uuid), job_status=JobStatus.RUNNING)
+            JobResult(
+                id=str(job_uuid),
+                study_id=study_uuid,
+                job_status=JobStatus.RUNNING,
+            )
+        )
+        self.event_bus.push(
+            Event(
+                EventType.STUDY_JOB_STARTED,
+                {"jid": str(job_uuid), "sid": study_uuid},
+            )
         )
 
         return job_uuid
@@ -48,3 +78,10 @@ class LauncherService:
             return job_result
 
         raise JobNotFound()
+
+    def get_jobs(self, study_uid: Optional[str] = None) -> List[JobResult]:
+        if study_uid is not None:
+            job_results = self.repository.find_by_study(study_uid)
+        else:
+            job_results = self.repository.get_all()
+        return job_results

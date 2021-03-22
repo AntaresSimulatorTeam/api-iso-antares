@@ -1,8 +1,7 @@
 import subprocess
 import threading
 from pathlib import Path
-from threading import Thread
-from typing import Dict, Optional, Callable, List, Any
+from typing import Callable, List, Any
 from uuid import UUID, uuid4
 
 from antarest.common.config import Config
@@ -20,7 +19,7 @@ class LocalLauncher(ILauncher):
         self.callbacks: List[Callable[[JobResult], None]] = []
 
     def run_study(self, study_path: Path, version: str) -> UUID:
-        antares_solver_path = self.config[f"launcher.binaries.{version}"]
+        antares_solver_path = self.config[f"launcher.local.binaries.{version}"]
         if antares_solver_path is None:
             raise StudyVersionNotSupported()
         else:

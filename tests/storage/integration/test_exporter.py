@@ -5,6 +5,7 @@ from zipfile import ZipFile
 from flask import Flask
 
 from antarest.common.config import Config
+from antarest.storage.model import Metadata
 from antarest.storage.repository.antares_io.exporter.export_file import (
     Exporter,
 )
@@ -17,15 +18,9 @@ def assert_url_content(storage_service: StorageService, url: str) -> bytes:
     app = Flask(__name__)
     build_storage(
         app,
+        session=Mock(),
         storage_service=storage_service,
-        config=Config(
-            {
-                "_internal": {
-                    "resources_path": storage_service.path_resources
-                },
-                "security": {"disabled": True},
-            }
-        ),
+        config=storage_service.study_service.config,
     )
     client = app.test_client()
     res = client.get(url)
@@ -43,15 +38,23 @@ def test_exporter_file(tmp_path: Path, sta_mini_zip_path: Path):
     with ZipFile(sta_mini_zip_path) as zip_output:
         zip_output.extractall(path=path_studies)
 
-    service = StorageService(
-        study_factory=StudyFactory(),
-        exporter=Exporter(),
-        config=Config(
-            {
-                "_internal": {"resources_path": Path()},
-                "storage": {"studies": path_studies},
-            }
-        ),
+    config = Config(
+        {
+            "_internal": {"resources_path": Path()},
+            "security": {"disabled": True},
+            "storage": {"workspaces": {"default": {"path": path_studies}}},
+        }
+    )
+
+    md = Metadata(id="STA-mini", workspace="default")
+    repo = Mock()
+    repo.get.return_value = md
+
+    service = build_storage(
+        application=Mock(),
+        config=config,
+        session=Mock(),
+        metadata_repository=repo,
     )
 
     data = assert_url_content(service, url="/studies/STA-mini/export")
@@ -68,16 +71,23 @@ def test_exporter_file_no_output(tmp_path: Path, sta_mini_zip_path: Path):
     with ZipFile(sta_mini_zip_path) as zip_output:
         zip_output.extractall(path=path_studies)
 
-    service = StorageService(
-        study_factory=StudyFactory(),
-        exporter=Exporter(),
-        config=Config(
-            {
-                "_internal": {"resources_path": Path()},
-                "security": {"disabled": True},
-                "storage": {"studies": path_studies},
-            }
-        ),
+    config = Config(
+        {
+            "_internal": {"resources_path": Path()},
+            "security": {"disabled": True},
+            "storage": {"workspaces": {"default": {"path": path_studies}}},
+        }
+    )
+
+    md = Metadata(id="STA-mini", workspace="default")
+    repo = Mock()
+    repo.get.return_value = md
+
+    service = build_storage(
+        application=Mock(),
+        config=config,
+        session=Mock(),
+        metadata_repository=repo,
     )
 
     data = assert_url_content(

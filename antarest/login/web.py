@@ -1,9 +1,7 @@
 import json
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import (  # type: ignore
     create_access_token,
     get_jwt_identity,
@@ -11,9 +9,9 @@ from flask_jwt_extended import (  # type: ignore
     jwt_required,
 )
 
-from antarest.common.auth import Auth
+from antarest.login.auth import Auth
 from antarest.common.config import Config
-from antarest.login.model import User, Group, Role
+from antarest.login.model import User, Group, Role, Password
 from antarest.login.service import LoginService
 
 
@@ -39,6 +37,53 @@ def create_login_api(service: LoginService, config: Config) -> Blueprint:
 
     @bp.route("/login", methods=["POST"])
     def login() -> Any:
+        """
+        Login
+        ---
+        responses:
+          '200':
+            content:
+              application/json:
+                schema:
+                  $ref: '#/definitions/UserCredentials'
+            description: Successful operation
+          '400':
+            description: Invalid request
+          '401':
+            description: Unauthenticated User
+          '403':
+            description: Unauthorized
+        consumes:
+            - application/x-www-form-urlencoded
+        parameters:
+        - in: body
+          name: body
+          required: true
+          description: user credentials
+          schema:
+            id: User
+            required:
+                - username
+                - password
+            properties:
+                username:
+                    type: string
+                password:
+                    type: string
+        definitions:
+            - schema:
+                id: UserCredentials
+                properties:
+                  user:
+                    type: string
+                    description: User name
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        tags:
+          - User
+        """
         username = request.form.get("username") or request.json.get("username")
         password = request.form.get("password") or request.json.get("password")
 
@@ -62,6 +107,46 @@ def create_login_api(service: LoginService, config: Config) -> Blueprint:
     @bp.route("/refresh", methods=["POST"])
     @jwt_required(refresh=True)  # type: ignore
     def refresh() -> Any:
+        """
+        Refresh access token
+        ---
+        responses:
+          '200':
+            content:
+              application/json:
+                schema:
+                  $ref: '#/definitions/UserCredentials'
+            description: Successful operation
+          '400':
+            description: Invalid request
+          '401':
+            description: Unauthenticated User
+          '403':
+            description: Unauthorized
+        consumes:
+            - application/x-www-form-urlencoded
+        parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: refresh token
+          schema:
+            type: string
+            description: (Bearer {token}) Refresh token received from login or previous refreshes
+        definitions:
+            - schema:
+                id: UserCredentials
+                properties:
+                  user:
+                    type: string
+                    description: User name
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+        tags:
+          - User
+        """
         identity = get_jwt_identity()
         user = service.get_user(identity["id"])
         if user:
@@ -82,17 +167,32 @@ def create_login_api(service: LoginService, config: Config) -> Blueprint:
     @bp.route("/users/<int:id>", methods=["GET"])
     @auth.protected(roles=[Role.ADMIN])
     def users_get_id(id: int) -> Any:
-        user = service.get_user(id)
-        if user:
-            return jsonify(user.to_dict())
+        u = service.get_user(id)
+        if u:
+            return jsonify(u.to_dict())
         else:
             return "", 404
 
     @bp.route("/users", methods=["POST"])
     @auth.protected(roles=[Role.ADMIN])
     def users_create() -> Any:
-        user = User.from_dict(json.loads(request.data))
-        return jsonify(service.save_user(user).to_dict())
+        data = json.loads(request.data)
+        u = User(
+            name=data["name"],
+            password=Password(data["password"]),
+            role=data.get("role", ""),
+        )
+
+        return jsonify(service.save_user(u).to_dict())
+
+    @bp.route("/users/<int:id>", methods=["POST"])
+    @auth.protected(roles=[Role.ADMIN])
+    def users_update(id: int) -> Any:
+        u = User.from_dict(json.loads(request.data))
+        if id != u.id:
+            return "Id in path must be same id in body", 400
+
+        return jsonify(service.save_user(u).to_dict())
 
     @bp.route("/users/<int:id>", methods=["DELETE"])
     @auth.protected(roles=[Role.ADMIN])
@@ -130,5 +230,10 @@ def create_login_api(service: LoginService, config: Config) -> Blueprint:
     @auth.protected()
     def protected() -> Any:
         return f"user id={get_jwt_identity()}"
+
+    @bp.route("/auth")
+    @auth.protected()
+    def auth_needed() -> Any:
+        return "ok"
 
     return bp

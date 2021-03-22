@@ -1,17 +1,25 @@
+import enum
 import uuid
 from typing import Any
 
-from sqlalchemy import Column, String, Integer, DateTime, Table, ForeignKey  # type: ignore
+from sqlalchemy import Column, String, Integer, DateTime, Table, ForeignKey, Enum, Boolean  # type: ignore
 from sqlalchemy.orm import relationship  # type: ignore
 
 from antarest.common.persistence import DTO, Base
+from antarest.login.model import User
 
-users_metadata = Table(
-    "users_metadata",
+groups_metadata = Table(
+    "group_metadata",
     Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("group_id", Integer, ForeignKey("groups.id")),
     Column("metadata_id", Integer, ForeignKey("metadata.id")),
 )
+
+
+class StudyContentStatus(enum.Enum):
+    VALID = "VALID"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
 
 
 class Metadata(DTO, Base):  # type: ignore
@@ -28,7 +36,14 @@ class Metadata(DTO, Base):  # type: ignore
     author = Column(String(255))
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
-    users = relationship("User", secondary=users_metadata)
+    content_status = Column(Enum(StudyContentStatus))
+    public = Column(Boolean(), default=False)
+    workspace = Column(String(255), default="default")
+    owner_id = Column(Integer, ForeignKey(User.id))
+    owner = relationship(User, uselist=False)
+    groups = relationship(
+        "Group", secondary=lambda: groups_metadata, cascade=""
+    )
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Metadata):
@@ -41,5 +56,15 @@ class Metadata(DTO, Base):  # type: ignore
             and other.author == self.author
             and other.created_at == self.created_at
             and other.updated_at == self.updated_at
-            and other.users == self.users
+            and other.content_status == self.content_status
+            and other.public == self.public
+            and other.workspace == self.workspace
+            and other.owner == self.owner
+            and other.groups == self.groups
         )
+
+    def __str__(self) -> str:
+        return f"Metadata(name={self.name}, version={self.version}, owner={self.owner}, groups={[str(u)+',' for u in self.groups]}"
+
+    def to_json_summary(self) -> Any:
+        return {"id": self.id, "name": self.name, "workspace": self.workspace}

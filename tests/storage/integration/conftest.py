@@ -1,9 +1,15 @@
 from pathlib import Path
+from unittest.mock import Mock
 from zipfile import ZipFile
 
 import pytest
 
 from antarest.common.config import Config
+from antarest.storage.business.exporter_service import ExporterService
+from antarest.storage.business.importer_service import ImporterService
+from antarest.storage.business.study_service import StudyService
+from antarest.storage.main import build_storage
+from antarest.storage.model import Metadata
 from antarest.storage.repository.antares_io.exporter.export_file import (
     Exporter,
 )
@@ -33,16 +39,24 @@ def storage_service(
     with ZipFile(sta_mini_zip_path) as zip_output:
         zip_output.extractall(path=path_studies)
 
-    storage_service = StorageService(
-        study_factory=StudyFactory(),
-        exporter=Exporter(),
-        config=Config(
-            {
-                "_internal": {"resources_path": path_resources},
-                "security": {"disabled": True},
-                "storage": {"studies": path_studies},
-            }
-        ),
+    md = Metadata(id="STA-mini", workspace="default")
+    repo = Mock()
+    repo.get.side_effect = lambda name: Metadata(id=name, workspace="default")
+    repo.get_all.return_value = [md]
+
+    config = Config(
+        {
+            "_internal": {"resources_path": path_resources},
+            "security": {"disabled": True},
+            "storage": {"workspaces": {"default": {"path": path_studies}}},
+        }
+    )
+
+    storage_service = build_storage(
+        application=Mock(),
+        session=Mock(),
+        config=config,
+        metadata_repository=repo,
     )
 
     return storage_service

@@ -5,8 +5,11 @@ from typing import Any, Optional
 
 from flask import Blueprint, send_file, request, jsonify, Response
 
-from antarest.common.auth import Auth
+from antarest.login.auth import Auth
 from antarest.common.config import Config
+from antarest.common.requests import (
+    RequestParameters,
+)
 from antarest.storage.service import StorageService
 from antarest import __version__
 
@@ -68,8 +71,8 @@ def create_utils_routes(
         """
 
         try:
-            file_path = storage_service.path_to_studies / path
-            return send_file(file_path.absolute())
+            params = RequestParameters(user=Auth.get_current_user())
+            return storage_service.get_matrix(path, params)
         except FileNotFoundError:
             return f"{path} not found", HTTPStatus.NOT_FOUND.value
 
@@ -100,7 +103,8 @@ def create_utils_routes(
         """
 
         data = request.files["matrix"].read()
-        storage_service.upload_matrix(path, data)
+        params = RequestParameters(user=Auth.get_current_user())
+        storage_service.upload_matrix(path, data, params)
         output = b""
         code = HTTPStatus.NO_CONTENT.value
 
@@ -112,9 +116,29 @@ def create_utils_routes(
 
     @bp.route("/version", methods=["GET"])
     def version() -> Any:
+        """
+        Get application version
+        ---
+        responses:
+          '200':
+            content:
+              application/json:
+                schema:
+                    type: object
+                    properties:
+                        version:
+                            type: string
+                            description: Semantic version
+                        gitcommit:
+                            type: string
+                            description: Build version (git commit id)
+            description: Successful operation
+        tags:
+          - Misc
+        """
         version_data = {"version": __version__}
 
-        commit_id = get_commit_id(storage_service.path_resources)
+        commit_id = get_commit_id(storage_service.study_service.path_resources)
         if commit_id is not None:
             version_data["gitcommit"] = commit_id
 
