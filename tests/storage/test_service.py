@@ -1,5 +1,6 @@
 from datetime import datetime
-from unittest.mock import Mock
+from pathlib import Path
+from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -8,17 +9,23 @@ from antarest.login.model import User, Role, Group
 from antarest.common.requests import (
     RequestParameters,
 )
-from antarest.storage.model import Metadata, StudyContentStatus
+from antarest.storage.model import (
+    Study,
+    StudyContentStatus,
+    StudyFolder,
+    DEFAULT_WORKSPACE_NAME,
+    RawStudy,
+)
 from antarest.storage.service import StorageService, UserHasNotPermissionError
 
 
-def test_get_studies_uuid():
+def test_get_studies_uuid() -> None:
     bob = User(id=1, name="bob")
     alice = User(id=2, name="alice")
 
-    a = Metadata(id="A", owner=bob)
-    b = Metadata(id="B", owner=alice)
-    c = Metadata(id="C", owner=bob)
+    a = Study(id="A", owner=bob)
+    b = Study(id="B", owner=alice)
+    c = Study(id="C", owner=bob)
 
     # Mock
     repository = Mock()
@@ -39,7 +46,88 @@ def test_get_studies_uuid():
     assert [a, c] == studies
 
 
-def test_save_metadata():
+def test_sync_studies_from_disk() -> None:
+    ma = RawStudy(id="a", path="a")
+    fa = StudyFolder(path=Path("a"), workspace="", groups=[])
+    mb = RawStudy(id="b", path="b")
+    mc = RawStudy(
+        id="c",
+        path="c",
+        name="c",
+        content_status=StudyContentStatus.WARNING,
+        workspace=DEFAULT_WORKSPACE_NAME,
+        owner=User(id=0),
+    )
+    fc = StudyFolder(
+        path=Path("c"), workspace=DEFAULT_WORKSPACE_NAME, groups=[]
+    )
+
+    repository = Mock()
+    repository.get_all.side_effect = [[ma, mb], [ma]]
+
+    service = StorageService(
+        study_service=Mock(),
+        importer_service=Mock(),
+        exporter_service=Mock(),
+        repository=repository,
+        event_bus=Mock(),
+    )
+
+    service.sync_studies_on_disk([fa, fc])
+
+    repository.delete.assert_called_once_with(mb.id)
+    repository.save.assert_called_once()
+
+
+def test_create_study() -> None:
+    # Mock
+    repository = Mock()
+
+    # Input
+    user = User(id=0, name="user", role=Role.USER)
+    group = Group(id="my-group", name="group")
+
+    expected = RawStudy(
+        id=str(uuid4()),
+        name="new-study",
+        version="VERSION",
+        author="AUTHOR",
+        created_at=datetime.fromtimestamp(1234),
+        updated_at=datetime.fromtimestamp(9876),
+        content_status=StudyContentStatus.VALID,
+        workspace=DEFAULT_WORKSPACE_NAME,
+        owner=user,
+        groups=[group],
+    )
+
+    study_service = Mock()
+    study_service.get_default_workspace_path.return_value = Path("")
+    study_service.get_study_information.return_value = {
+        "antares": {
+            "caption": "CAPTION",
+            "version": "VERSION",
+            "author": "AUTHOR",
+            "created": 1234,
+            "lastsave": 9876,
+        }
+    }
+    study_service.create_study.return_value = expected
+
+    service = StorageService(
+        study_service=study_service,
+        importer_service=Mock(),
+        exporter_service=Mock(),
+        repository=repository,
+        event_bus=Mock(),
+    )
+
+    service.create_study("new-study", RequestParameters(user))
+
+    study_service.create_study.assert_called_once()
+    repository.save.assert_called_once_with(expected)
+
+
+def test_save_metadata() -> None:
     # Mock
     repository = Mock()
 
@@ -61,7 +149,7 @@ def test_save_metadata():
     group = Group(id="my-group", name="group")
 
     # Expected
-    metadata = Metadata(
+    study = RawStudy(
         id=uuid,
         name="CAPTION",
         version="VERSION",
@@ -69,7 +157,7 @@ def test_save_metadata():
         created_at=datetime.fromtimestamp(1234),
         updated_at=datetime.fromtimestamp(9876),
         content_status=StudyContentStatus.VALID,
-        workspace="default",
+        workspace=DEFAULT_WORKSPACE_NAME,
         owner=user,
         groups=[group],
     )
@@ -82,13 +170,15 @@ def test_save_metadata():
         event_bus=Mock(),
     )
 
-    service._save_metadata(
-        Metadata(id=uuid, workspace="default"), owner=user, group=group
+    service._save_study(
+        RawStudy(id=uuid, workspace=DEFAULT_WORKSPACE_NAME),
+        owner=user,
+        group=group,
     )
-    repository.save.assert_called_once_with(metadata)
+    repository.save.assert_called_once_with(study)
 
 
-def test_assert_permission():
+def test_assert_permission() -> None:
     uuid = str(uuid4())
     group = Group(id="my-group")
     good = User(id=0, groups=[group])
@@ -105,22 +195,22 @@ def test_assert_permission():
     )
 
     # wrong owner
-    repository.get.return_value = Metadata(id=uuid, owner=wrong)
-    md = service._get_metadata(uuid)
+    repository.get.return_value = Study(id=uuid, owner=wrong)
+    study = service._get_study(uuid)
     with pytest.raises(UserHasNotPermissionError):
-        service._assert_permission(good, md)
-    assert not service._assert_permission(good, md, raising=False)
+        service._assert_permission(good, study)
+    assert not service._assert_permission(good, study, raising=False)
 
     # good owner
-    md = Metadata(id=uuid, owner=good)
-    assert service._assert_permission(good, md)
+    study = Study(id=uuid, owner=good)
+    assert service._assert_permission(good, study)
 
     # wrong group
-    md = Metadata(id=uuid, owner=wrong, groups=[Group(id="wrong")])
+    study = Study(id=uuid, owner=wrong, groups=[Group(id="wrong")])
     with pytest.raises(UserHasNotPermissionError):
-        service._assert_permission(good, md)
-    assert not service._assert_permission(good, md, raising=False)
+        service._assert_permission(good, study)
+    assert not service._assert_permission(good, study, raising=False)
 
     # good group
-    md = Metadata(id=uuid, owner=wrong, groups=[group])
-    assert service._assert_permission(good, md)
+    study = Study(id=uuid, owner=wrong, groups=[group])
+    assert service._assert_permission(good, study)
