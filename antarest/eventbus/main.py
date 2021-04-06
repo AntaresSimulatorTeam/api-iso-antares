@@ -8,19 +8,26 @@ from antarest.eventbus.service import EventBusService
 from antarest.eventbus.web import configure_websockets
 
 
+def build_eventbus_service(
+    config: Config,
+    autostart: bool = True,
+):
+    redis_conf = config.eventbus.redis
+    return EventBusService(
+        RedisEventBus(redis_conf)
+        if redis_conf is not None
+        else LocalEventBus(),
+        autostart,
+    )
+
+
 def build_eventbus(
     application: Flask,
     config: Config,
     autostart: bool = True,
 ) -> IEventBus:
 
-    redis_conf = config.eventbus.redis
-    eventbus = EventBusService(
-        RedisEventBus(redis_conf)
-        if redis_conf is not None
-        else LocalEventBus(),
-        autostart,
-    )
+    eventbus = build_eventbus_service(config, autostart)
 
     configure_websockets(application, config, eventbus)
     return eventbus

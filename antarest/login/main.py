@@ -15,6 +15,22 @@ from antarest.login.service import LoginService
 from antarest.login.web import create_login_api
 
 
+def build_login_service(
+    config: Config,
+    db_session: Session,
+    event_bus: IEventBus = DummyEventBusService(),
+):
+    user_repo = UserRepository(config, db_session)
+    group_repo = GroupRepository(db_session)
+    role_repo = RoleRepository(db_session)
+    return LoginService(
+        user_repo=user_repo,
+        group_repo=group_repo,
+        role_repo=role_repo,
+        event_bus=event_bus,
+    )
+
+
 def build_login(
     application: Flask,
     config: Config,
@@ -24,15 +40,7 @@ def build_login(
 ) -> LoginService:
 
     if service is None:
-        user_repo = UserRepository(config, db_session)
-        group_repo = GroupRepository(db_session)
-        role_repo = RoleRepository(db_session)
-        service = LoginService(
-            user_repo=user_repo,
-            group_repo=group_repo,
-            role_repo=role_repo,
-            event_bus=event_bus,
-        )
+        service = build_login_service(config, db_session, event_bus)
 
     JWTManager(application)
     application.register_blueprint(create_login_api(service, config))

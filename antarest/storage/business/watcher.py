@@ -6,6 +6,7 @@ from typing import List
 from filelock import FileLock  # type: ignore
 
 from antarest.common.config import Config
+from antarest.common.interfaces.scheduled_task import ScheduledTask
 from antarest.login.model import Group
 from antarest.storage.model import StudyFolder, DEFAULT_WORKSPACE_NAME
 from antarest.storage.service import StorageService
@@ -14,7 +15,8 @@ from antarest.storage.service import StorageService
 logger = logging.getLogger(__name__)
 
 
-class Watcher:
+class Watcher(ScheduledTask):
+    SKIPPED_DIRS = [".git"]
     LOCK = Path("watcher")
     DELAY = 2
 
@@ -50,6 +52,7 @@ class Watcher:
                 return False
 
     def _loop(self) -> None:
+        logger.info("Starting watcher")
         while True:
             self._scan()
             sleep(2)
@@ -66,9 +69,10 @@ class Watcher:
                     folders: List[StudyFolder] = list()
                     if path.is_dir():
                         for child in path.iterdir():
-                            folders = folders + rec_scan(
-                                child, workspace, groups
-                            )
+                            if child.name not in Watcher.SKIPPED_DIRS:
+                                folders = folders + rec_scan(
+                                    child, workspace, groups
+                                )
                     return folders
             except Exception as e:
                 logger.error(f"Failed to scan dir {path}", exc_info=e)

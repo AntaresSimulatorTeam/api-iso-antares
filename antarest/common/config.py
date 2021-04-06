@@ -113,6 +113,7 @@ class Config:
     debug: bool = True
     resources_path: Path = Path()
     eventbus: EventBusConfig = EventBusConfig()
+    embedded_scheduled_tasks: bool = True
 
     @staticmethod
     def from_dict(data: JSON, res: Optional[Path] = None) -> "Config":
@@ -127,6 +128,9 @@ class Config:
             eventbus=EventBusConfig.from_dict(data["eventbus"])
             if "eventbus" in data
             else EventBusConfig(),
+            embedded_scheduled_tasks=data["embedded_scheduled_tasks"]
+            if "embedded_scheduled_tasks" in data
+            else True,
         )
 
     @staticmethod

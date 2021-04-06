@@ -8,7 +8,10 @@ from typing import Tuple, Any
 
 from gevent import monkey  # type: ignore
 
-monkey.patch_all()
+from antarest.common.utils import get_default_config_path, get_local_path, configure_logger
+from antarest.storage.business.watcher import Watcher
+
+monkey.patch_all(thread=False)
 
 from flask import Flask, render_template, json, request
 from sqlalchemy import create_engine  # type: ignore
@@ -46,20 +49,6 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def get_default_config_path() -> Path:
-    config = Path("config.yaml")
-    if config.exists():
-        return config
-
-    config = Path.home() / ".antares/config.yaml"
-    if config.exists():
-        return config
-
-    raise ValueError(
-        "Config file not found. Set it by '-c' with command line or place it at ./config.yaml or ~/.antares/config.yaml"
-    )
-
-
 def get_arguments() -> Tuple[Path, bool]:
     arguments = parse_arguments()
 
@@ -69,26 +58,6 @@ def get_arguments() -> Tuple[Path, bool]:
 
     config_file = Path(arguments.config_file or get_default_config_path())
     return config_file, display_version
-
-
-def get_local_path() -> Path:
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        return Path(sys._MEIPASS)  # type: ignore
-    except Exception:
-        return Path(os.path.abspath(""))
-
-
-def configure_logger(config: Config) -> None:
-    logging_path = config.logging.path
-    logging_level = config.logging.level or "INFO"
-    logging_format = (
-        config.logging.format
-        or "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    logging.basicConfig(
-        filename=logging_path, format=logging_format, level=logging_level
-    )
 
 
 def flask_app(config_file: Path) -> Flask:
@@ -161,6 +130,7 @@ def flask_app(config_file: Path) -> Flask:
         user_service=user_service,
         event_bus=event_bus,
     )
+
     build_launcher(
         application,
         config,
