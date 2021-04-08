@@ -13,6 +13,7 @@ import LoginWrapper from './LoginWrapper';
 import theme, { TOOLBAR_HEIGHT } from './theme';
 import SwaggerDoc from './Pages/SwaggerDoc';
 import JobManagement from './Pages/JobManagement';
+import AdminPanel from './Pages/AdminPanel';
 
 const reduxStore = createStore();
 
@@ -29,6 +30,9 @@ const App: React.FC<{}> = () => (
                 <Switch>
                   <Route path="/" exact key="home">
                     <StudyManagement />
+                  </Route>
+                  <Route path="/admin" exact key="home">
+                    <AdminPanel />
                   </Route>
                   <Route path="/study/:studyId" key="module">
                     <SingleStudyView />
