@@ -5,13 +5,14 @@ from sqlalchemy.orm import scoped_session, sessionmaker  # type: ignore
 
 from antarest.common.config import Config
 from antarest.common.persistence import Base
-from antarest.login.model import User, Role, Group
+from antarest.login.model import User, RoleType, Group
 from antarest.login.repository import UserRepository
 from antarest.storage.model import (
     Study,
     RawStudy,
     DEFAULT_WORKSPACE_NAME,
     StudyContentStatus,
+    PublicMode,
 )
 from antarest.storage.repository.study import StudyMetadataRepository
 
@@ -22,7 +23,7 @@ def test_cyclelife():
         sessionmaker(autocommit=False, autoflush=False, bind=engine)
     )
 
-    user = User(id=0, name="admin", role=Role.ADMIN)
+    user = User(id=0, name="admin")
     group = Group(id="my-group", name="group")
     Base.metadata.create_all(engine)
 
@@ -33,7 +34,7 @@ def test_cyclelife():
         author="John Smith",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        public=True,
+        public_mode=PublicMode.FULL,
         owner=user,
         groups=[group],
     )
@@ -43,7 +44,7 @@ def test_cyclelife():
         author="Morpheus",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        public=True,
+        public_mode=PublicMode.FULL,
         owner=user,
         groups=[group],
     )
@@ -64,7 +65,7 @@ def test_study_inheritance():
         sessionmaker(autocommit=False, autoflush=False, bind=engine)
     )
 
-    user = User(id=0, name="admin", role=Role.ADMIN)
+    user = User(id=0, name="admin")
     group = Group(id="my-group", name="group")
     Base.metadata.create_all(engine)
 
@@ -75,7 +76,7 @@ def test_study_inheritance():
         author="John Smith",
         created_at=datetime.now(),
         updated_at=datetime.now(),
-        public=True,
+        public_mode=PublicMode.FULL,
         owner=user,
         groups=[group],
         workspace=DEFAULT_WORKSPACE_NAME,

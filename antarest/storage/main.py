@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session  # type: ignore
 
 from antarest.common.config import Config
 from antarest.common.interfaces.eventbus import IEventBus, DummyEventBusService
+from antarest.login.service import LoginService
 from antarest.storage.business.exporter_service import ExporterService
 from antarest.storage.business.importer_service import ImporterService
 from antarest.storage.business.raw_study_service import StudyService
@@ -25,6 +26,7 @@ def build_storage(
     application: Flask,
     config: Config,
     session: Session,
+    user_service: LoginService,
     metadata_repository: Optional[StudyMetadataRepository] = None,
     study_factory: Optional[StudyFactory] = None,
     exporter: Optional[Exporter] = None,
@@ -32,7 +34,7 @@ def build_storage(
     event_bus: IEventBus = DummyEventBusService(),
 ) -> StorageService:
 
-    path_resources = Path(config["_internal.resources_path"])
+    path_resources = config.resources_path
     study_factory = study_factory or StudyFactory()
     exporter = exporter or Exporter()
     metadata_repository = metadata_repository or StudyMetadataRepository(
@@ -58,6 +60,7 @@ def build_storage(
         study_service=study_service,
         importer_service=importer_service,
         exporter_service=exporter_service,
+        user_service=user_service,
         repository=metadata_repository,
         event_bus=event_bus,
     )

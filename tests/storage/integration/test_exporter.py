@@ -4,7 +4,12 @@ from zipfile import ZipFile
 
 from flask import Flask
 
-from antarest.common.config import Config
+from antarest.common.config import (
+    Config,
+    SecurityConfig,
+    StorageConfig,
+    WorkspaceConfig,
+)
 from antarest.storage.model import Study, DEFAULT_WORKSPACE_NAME, RawStudy
 from antarest.storage.repository.antares_io.exporter.export_file import (
     Exporter,
@@ -19,6 +24,7 @@ def assert_url_content(storage_service: StorageService, url: str) -> bytes:
     build_storage(
         app,
         session=Mock(),
+        user_service=Mock(),
         storage_service=storage_service,
         config=storage_service.study_service.config,
     )
@@ -39,13 +45,13 @@ def test_exporter_file(tmp_path: Path, sta_mini_zip_path: Path):
         zip_output.extractall(path=path_studies)
 
     config = Config(
-        {
-            "_internal": {"resources_path": Path()},
-            "security": {"disabled": True},
-            "storage": {
-                "workspaces": {DEFAULT_WORKSPACE_NAME: {"path": path_studies}}
-            },
-        }
+        resources_path=Path(),
+        security=SecurityConfig(disabled=True),
+        storage=StorageConfig(
+            workspaces={
+                DEFAULT_WORKSPACE_NAME: WorkspaceConfig(path=path_studies)
+            }
+        ),
     )
 
     md = RawStudy(
@@ -60,6 +66,7 @@ def test_exporter_file(tmp_path: Path, sta_mini_zip_path: Path):
         application=Mock(),
         config=config,
         session=Mock(),
+        user_service=Mock(),
         metadata_repository=repo,
     )
 
@@ -78,13 +85,13 @@ def test_exporter_file_no_output(tmp_path: Path, sta_mini_zip_path: Path):
         zip_output.extractall(path=path_studies)
 
     config = Config(
-        {
-            "_internal": {"resources_path": Path()},
-            "security": {"disabled": True},
-            "storage": {
-                "workspaces": {DEFAULT_WORKSPACE_NAME: {"path": path_studies}}
-            },
-        }
+        resources_path=Path(),
+        security=SecurityConfig(disabled=True),
+        storage=StorageConfig(
+            workspaces={
+                DEFAULT_WORKSPACE_NAME: WorkspaceConfig(path=path_studies)
+            }
+        ),
     )
 
     md = RawStudy(
@@ -99,6 +106,7 @@ def test_exporter_file_no_output(tmp_path: Path, sta_mini_zip_path: Path):
         application=Mock(),
         config=config,
         session=Mock(),
+        user_service=Mock(),
         metadata_repository=repo,
     )
 
