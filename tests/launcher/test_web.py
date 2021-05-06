@@ -11,6 +11,7 @@ from antarest.common.requests import RequestParameters
 from antarest.common.roles import RoleType
 from antarest.launcher.main import build_launcher
 from antarest.launcher.model import JobResult, JobStatus
+from antarest.login.model import User
 
 
 ADMIN = JWTUser(

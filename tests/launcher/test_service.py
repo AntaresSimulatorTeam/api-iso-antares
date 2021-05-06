@@ -28,7 +28,9 @@ def test_service_run_study(get_current_user_mock):
     launcher_mock = Mock()
     launcher_mock.run_study.return_value = uuid
     factory_launcher_mock = Mock()
-    factory_launcher_mock.build_launcher.return_value = launcher_mock
+    factory_launcher_mock.build_launcher.return_value = {
+        "local": launcher_mock
+    }
 
     event_bus = Mock()
 
@@ -77,7 +79,9 @@ def test_service_get_result_from_launcher():
         exit_code=0,
     )
     factory_launcher_mock = Mock()
-    factory_launcher_mock.build_launcher.return_value = launcher_mock
+    factory_launcher_mock.build_launcher.return_value = {
+        "local": launcher_mock
+    }
 
     repository = Mock()
     repository.get.return_value = fake_execution_result
@@ -107,7 +111,9 @@ def test_service_get_result_from_database():
     )
     launcher_mock.get_result.return_value = None
     factory_launcher_mock = Mock()
-    factory_launcher_mock.build_launcher.return_value = launcher_mock
+    factory_launcher_mock.build_launcher.return_value = {
+        "local": launcher_mock
+    }
 
     repository = Mock()
     repository.get.return_value = fake_execution_result
@@ -138,7 +144,9 @@ def test_service_get_jobs_from_database():
     ]
     launcher_mock.get_result.return_value = None
     factory_launcher_mock = Mock()
-    factory_launcher_mock.build_launcher.return_value = launcher_mock
+    factory_launcher_mock.build_launcher.return_value = {
+        "local": launcher_mock
+    }
 
     repository = Mock()
     repository.find_by_study.return_value = fake_execution_result
