@@ -18,6 +18,10 @@ from antarest.storage.service import StorageService
 from antarest.common.requests import (
     RequestParameters,
 )
+from tests.storage.integration.data.de_details_hourly import de_details_hourly
+from tests.storage.integration.data.de_fr_values_hourly import (
+    de_fr_values_hourly,
+)
 
 ADMIN = JWTUser(
     id=1,
@@ -151,11 +155,11 @@ def test_sta_mini_study_antares(
         ),
         (
             "/studies/STA-mini/input/hydro/series/de/mod",
-            "file/STA-mini/input/hydro/series/de/mod.txt",
+            {},
         ),
         (
             "/studies/STA-mini/input/areas/list",
-            "file/STA-mini/input/areas/list.txt",
+            ["de", "es", "fr", "it"],
         ),
         ("/studies/STA-mini/input/areas/sets/all areas/output", False),
         (
@@ -166,11 +170,15 @@ def test_sta_mini_study_antares(
         ("/studies/STA-mini/input/hydro/allocation/de/[allocation/de", 1),
         (
             "/studies/STA-mini/input/hydro/common/capacity/reservoir_fr",
-            "file/STA-mini/input/hydro/common/capacity/reservoir_fr.txt",
+            {
+                0: {i: 0 for i in range(365)},
+                1: {i: 0.5 for i in range(365)},
+                2: {i: 1 for i in range(365)},
+            },
         ),
         (
             "/studies/STA-mini/input/thermal/series/fr/05_nuclear/series",
-            "file/STA-mini/input/thermal/series/fr/05_nuclear/series.txt",
+            {0: {i: 2000 for i in range(8760)}},
         ),
         (
             "/studies/STA-mini/input/hydro/prepro/correlation/general/mode",
@@ -206,7 +214,16 @@ def test_sta_mini_study_antares(
         ),
         (
             "/studies/STA-mini/input/links/fr/it",
-            "file/STA-mini/input/links/fr/it.txt",
+            {
+                0: {i: 100000 for i in range(8760)},
+                1: {i: 100000 for i in range(8760)},
+                2: {i: 0.01 for i in range(8760)},
+                3: {i: 0.01 for i in range(8760)},
+                4: {i: 0 for i in range(8760)},
+                5: {i: 0 for i in range(8760)},
+                6: {i: 0 for i in range(8760)},
+                7: {i: 0 for i in range(8760)},
+            },
         ),
         (
             "/studies/STA-mini/input/load/prepro/fr/k",
@@ -214,7 +231,7 @@ def test_sta_mini_study_antares(
         ),
         (
             "/studies/STA-mini/input/load/series/load_fr",
-            "file/STA-mini/input/load/series/load_fr.txt",
+            {0: {i: (i % 168) * 100 for i in range(8760)}},
         ),
         (
             "/studies/STA-mini/input/misc-gen/miscgen-fr",
@@ -230,7 +247,7 @@ def test_sta_mini_study_antares(
         ),
         (
             "/studies/STA-mini/input/solar/series/solar_fr",
-            "file/STA-mini/input/solar/series/solar_fr.txt",
+            {},
         ),
         (
             "/studies/STA-mini/input/wind/prepro/fr/k",
@@ -238,7 +255,7 @@ def test_sta_mini_study_antares(
         ),
         (
             "/studies/STA-mini/input/wind/series/wind_fr",
-            "file/STA-mini/input/wind/series/wind_fr.txt",
+            {},
         ),
     ],
 )
@@ -291,29 +308,17 @@ def test_sta_mini_input(storage_service, url: str, expected_output: str):
             "Andrea SGATTONI",
         ),
         (
-            "/studies/STA-mini/output/1/economy/mc-all/areas/de/id-daily",
-            "file/STA-mini/output/20201014-1422eco-hello/economy/mc-all/areas/de/id-daily.txt",
-        ),
-        (
             "/studies/STA-mini/output/1/economy/mc-all/grid/areas",
             "file/STA-mini/output/20201014-1422eco-hello/economy/mc-all/grid/areas.txt",
         ),
         ("/studies/STA-mini/output/1/economy/mc-all/links/de/fr", {}),
         (
             "/studies/STA-mini/output/1/economy/mc-ind/00001/links/de/fr/values-hourly",
-            "file/STA-mini/output/20201014-1422eco-hello/economy/mc-ind/00001/links/de - fr/values-hourly.txt",
+            de_fr_values_hourly,
         ),
         (
             "/studies/STA-mini/output/1/economy/mc-ind/00001/areas/de/details-annual",
-            "file/STA-mini/output/20201014-1422eco-hello/economy/mc-ind/00001/areas/de/details-annual.txt",
-        ),
-        (
-            "/studies/STA-mini/output/1/economy/mc-ind/00001/areas/de/details-annual",
-            "file/STA-mini/output/20201014-1422eco-hello/economy/mc-ind/00001/areas/de/details-annual.txt",
-        ),
-        (
-            "/studies/STA-mini/output/4/adequacy/mc-all/areas/de/id-daily",
-            "file/STA-mini/output/20201014-1430adq/adequacy/mc-all/areas/de/id-daily.txt",
+            de_details_hourly,
         ),
         (
             "/studies/STA-mini/output/1/ts-numbers/hydro/de",
